@@ -1,17 +1,17 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <tgmath.h>
 #include <SDL/SDL.h>
 
-// build a hardcoded c array 
+// build a hardcoded cpp array 
 float* c_array(float constant, int size) {
 
   float* array;
-  array = malloc(sizeof(float)*size);
+  array = new float[size];
+  // array = malloc(sizeof(float)*size);
 
   int i;
   for (i = 0; i < size; i++) {
-    array[i] = cos(constant);
+    array[i] = constant;
     // printf("%f\n", array[i]);
   }
   return array;

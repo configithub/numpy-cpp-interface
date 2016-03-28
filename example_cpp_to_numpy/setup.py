@@ -19,7 +19,8 @@ def configuration(parent_package='', top_path=None):
     config.add_extension('array_to_numpy',
                          sources=['array_to_numpy.pyx'],
                          libraries=['SDL'],
-                         depends=['c_array.c'],
+                         depends=['cpp_array.cpp'],
+                         language='c++',
                          include_dirs=[numpy.get_include()])
     return config
 
