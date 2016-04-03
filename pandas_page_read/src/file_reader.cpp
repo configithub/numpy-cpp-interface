@@ -49,7 +49,7 @@ void* read_paget(void* arg) {
   param->fr->a.swap(a);
   param->fr->b.clear();
   param->fr->b.swap(b);
-  param->fr->thread_created=0;
+  param->fr->thread_created=2;
   waiting_ref = 1;
   return NULL;
 }
@@ -71,21 +71,26 @@ void FileReader::read_page(char* filename, int page_size) {
     param.page_size = page_size;
     a.reserve(page_size+1);
     b.reserve(page_size+1);
-    //a.reserve(100);
-    //b.reserve(100);
+    waiting = 0;
     param.waiting = &waiting;
     param.fr = this;
     void* param_ptr = &param;
     int threadid = pthread_create(&page_thread, NULL, read_paget, param_ptr);
     //std::cout << "thread created: " << threadid << std::endl;
-  }else{ // thread is already created and waiting
+    while(waiting == 0) {
+      // //std::cout << "waiting in function" << std::endl; 
+    }
+  }else if(thread_created==1){ // thread is already created and waiting
     waiting = 0;
+    // wait for page thread to read one page
+    while(waiting == 0) {
+      // //std::cout << "waiting in function" << std::endl; 
+    }
+    return;
+  }else{ // file finished
+    a.clear(); b.clear();
+    return;
   }
-  // wait for page thread to read one page
-  while(waiting == 0) {
-    // //std::cout << "waiting in function" << std::endl; 
-  }
-  return;
   
 }
 
