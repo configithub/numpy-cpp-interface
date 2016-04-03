@@ -5,20 +5,21 @@
 #include <iostream>
 #include <sstream>
 #include <stdlib.h>
+#include <unistd.h>
 
+pthread_mutex_t read_mutex;
+pthread_cond_t page_finished_cv;
+pthread_cond_t next_page_requested_cv;
 
 void* read_paget(void* arg) {
-  Param* param;
-  param = (Param*) arg;
+  Param* param = (Param*) arg;
   std::ifstream str_file(param->filename);
   std::string line;
   int idx = 0;
   std::vector<int> a;
-  a.reserve(param->page_size+1); // HERE POSSIBLE BUG IF VECTOR ARE REALLOCATED
+  a.reserve(param->page_size+1); 
   std::vector<int> b;
   b.reserve(param->page_size+1);
-  //a.reserve(100);
-  //b.reserve(100);
   volatile int& waiting_ref = *(param->waiting);
   while(std::getline(str_file,line)) {
 
@@ -31,8 +32,8 @@ void* read_paget(void* arg) {
     b.push_back(atoi(cell.c_str()));
     ++idx;
     if(idx%param->page_size==0) {
-      //std::cout << "page finished" << std::endl;
       // swap buffers and wait
+      pthread_mutex_lock(&read_mutex);
       param->fr->a.clear();
       param->fr->a.swap(a);
       a.clear();
@@ -40,18 +41,27 @@ void* read_paget(void* arg) {
       param->fr->b.swap(b);
       b.clear();
       waiting_ref = 1;
+      pthread_cond_signal(&page_finished_cv);
+      pthread_mutex_unlock(&read_mutex);
+      pthread_mutex_lock(&read_mutex);
       while(waiting_ref) {
-        // //std::cout << "waiting in thread" << std::endl; // <<< inifite loop here now
+        pthread_cond_wait(&next_page_requested_cv, &read_mutex);
+        std::cout << "waiting in thread" << std::endl; 
       }
+      pthread_mutex_unlock(&read_mutex);
     }
   }
+  pthread_mutex_lock(&read_mutex);
   param->fr->a.clear();
   param->fr->a.swap(a);
   param->fr->b.clear();
   param->fr->b.swap(b);
   param->fr->thread_created=2;
   waiting_ref = 1;
-  return NULL;
+  pthread_cond_signal(&page_finished_cv);
+  pthread_mutex_unlock(&read_mutex);
+  //return NULL;
+  pthread_exit(NULL);
 }
 
 
@@ -67,6 +77,9 @@ void FileReader::read_page(char* filename, int page_size) {
   if(thread_created==0) { 
     //std::cout << "inside if for t creation" << thread_created << std::endl;
     thread_created = 1;
+    pthread_mutex_init(&read_mutex, NULL);
+    pthread_cond_init (&page_finished_cv, NULL);
+    pthread_cond_init (&next_page_requested_cv, NULL);
     param.filename = filename;
     param.page_size = page_size;
     a.reserve(page_size+1);
@@ -77,15 +90,25 @@ void FileReader::read_page(char* filename, int page_size) {
     void* param_ptr = &param;
     int threadid = pthread_create(&page_thread, NULL, read_paget, param_ptr);
     //std::cout << "thread created: " << threadid << std::endl;
+    pthread_mutex_lock(&read_mutex);
     while(waiting == 0) {
-      // //std::cout << "waiting in function" << std::endl; 
-    }
+      pthread_cond_wait(&page_finished_cv, &read_mutex);
+      std::cout << "waiting in function" << std::endl; 
+    } 
+    pthread_mutex_unlock(&read_mutex);
+    return;
   }else if(thread_created==1){ // thread is already created and waiting
     waiting = 0;
     // wait for page thread to read one page
+    pthread_mutex_lock(&read_mutex);
+    pthread_cond_signal(&next_page_requested_cv);
+    pthread_mutex_unlock(&read_mutex);
+    pthread_mutex_lock(&read_mutex);
     while(waiting == 0) {
-      // //std::cout << "waiting in function" << std::endl; 
+      pthread_cond_wait(&page_finished_cv, &read_mutex);
+      std::cout << "waiting in function" << std::endl; 
     }
+    pthread_mutex_unlock(&read_mutex);
     return;
   }else{ // file finished
     a.clear(); b.clear();

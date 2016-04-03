@@ -31,7 +31,7 @@ void read_sample_page(void* file_readerv, int*& a, int*& b, int& size) {
 
   //FileReader* file_reader = get_file_reader();
   std::cout << "before file_reader->read_page"  << std::endl;
-  file_reader->read_page("files/sample.csv", 22);
+  file_reader->read_page("files/sample.csv", 7);
   std::cout << "after file_reader->read_page" << std::endl;
 
   a = &(file_reader->a[0]);
