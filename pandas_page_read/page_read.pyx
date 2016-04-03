@@ -1,12 +1,8 @@
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 # Declare the prototype of the C function we are interested in calling
-cdef extern from "interface.cpp":
-    void read_sample_file(int*& a, int*&b, int& size)
 cdef extern from "src/file_reader.h":
     cdef cppclass FileReader:
         void read_page(char* filename, int page_size)    
-        int thread_created
-        int waiting
 cdef extern from "interface.cpp":
     void read_sample_page(void* file_reader, int*& a, int*&b, int& size)
 
@@ -94,20 +90,6 @@ cdef wrap_array(int size, void* array):
     Py_INCREF(array_wrapper)
     return ndarray
 
-
-def read_file():
-    cdef int *a
-    cdef int *b
-    cdef int size
-    # Call the C function
-    read_sample_file(a, b, size)
-    cdef np.ndarray ndarray_a
-    cdef np.ndarray ndarray_b
-    ndarray_a = wrap_array(size, a)
-    ndarray_b = wrap_array(size, b)
-
-    return pd.DataFrame({'a':ndarray_a, 'b':ndarray_b})
-    
 
 def create_file_reader():
     cdef FileReader *fr = new FileReader()

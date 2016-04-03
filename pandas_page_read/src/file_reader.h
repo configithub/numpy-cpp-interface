@@ -17,15 +17,19 @@ public:
 class FileReader{
 
 public:
-  void read_file(char* filename);
   void read_page(char* filename, int page_size);
   void display_buffer();
   FileReader();
   ~FileReader();
-  //FileReader():thread_created(0), waiting(0){};
-  int thread_created; 
+  // to know at which step of the process we are :
+  // first call : thread_created = 0
+  // second to nth call : thread_created = 1
+  // file finished reading : thread_created = 2
+  int thread_created;  
+  // to know if we the user thread is waiting for the reader thread
   volatile int waiting;
-  pthread_t page_thread;
+  // the thread on which we call the read_page static function
+  pthread_t page_thread; 
   Param param;
   std::vector<int> a;
   std::vector<int> b;
